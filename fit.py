@@ -2,6 +2,7 @@
 #this module will computer various MLEs for distributions
 
 from __future__ import print_function, division
+import sys
 import numpy as np
 from sympy import *
 import operator
@@ -129,14 +130,18 @@ def fit_nonlinearly(func, nonlinvals, extraargs, options=None):
 def get_jacobian(expr, variables):
     jacobian = {}
     for var in variables:
+        print("Jacobian[", var, "] = ", sep='', end='', file=sys.stderr)
         jacobian[var] = simplify(diff(expr, var))
+        print(jacobian[var], sep='', file=sys.stderr)
     return jacobian
 
 def get_hessian(expr, variables):
     hessian = {}
     for var1 in variables:
         for var2 in variables:
+            print("Hessian[", var1, ",", var2, "] = ", sep='', end='', file=sys.stderr)
             hessian[var1, var2] = simplify(diff(expr, var1, var2))
+            print(hessian[var1, var2], sep='', file=sys.stderr)
     return hessian
 
 def get_linpars_nonlinpars(hessian, variables):

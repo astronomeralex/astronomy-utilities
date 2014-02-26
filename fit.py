@@ -73,7 +73,7 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
         parameters[p] = v
 
     # provide function
-    fitexpr = simplify(expr.subs(parameters))
+    fitexpr = expr.subs(parameters)
 
     return parameters, fitexpr, mlogl, success
 
@@ -131,7 +131,7 @@ def get_jacobian(expr, variables):
     jacobian = {}
     for var in variables:
         print("Jacobian[", var, "] = ", sep='', end='', file=sys.stderr)
-        jacobian[var] = simplify(diff(expr, var))
+        jacobian[var] = diff(expr, var)
         print(jacobian[var], sep='', file=sys.stderr)
     return jacobian
 
@@ -140,7 +140,7 @@ def get_hessian(expr, variables):
     for var1 in variables:
         for var2 in variables:
             print("Hessian[", var1, ",", var2, "] = ", sep='', end='', file=sys.stderr)
-            hessian[var1, var2] = simplify(diff(expr, var1, var2))
+            hessian[var1, var2] = diff(expr, var1, var2)
             print(hessian[var1, var2], sep='', file=sys.stderr)
     return hessian
 

@@ -28,6 +28,8 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
     jacobian = get_jacobian(expr, variables)
     hessian = get_hessian(expr, variables)
     linpars, nonlinpars = get_linpars_nonlinpars(hessian, pars.keys())
+    print("Linear:", linpars)
+    print("Nonlinear:", nonlinpars)
 
     # yeah, ufuncify. yo. order matters.
     funcset = []
@@ -36,7 +38,6 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
         funcset += [numerical_func([xvar] + nonlinpars, jacobian[p])]
         nonlinexpr -= p * jacobian[p]
     nonlinfunc = numerical_func([xvar] + nonlinpars, nonlinexpr)
-
     if len(nonlinpars) == 0:
         assert nonlinexpr == 0
 
@@ -197,6 +198,12 @@ def make_data():
     ydata = np.array([3.1, 1.9, 1.03, -0.2])
     return xdata, ydata
 
+def make_gaussdata():
+    xdata = np.linspace(-2.0, 2.0, 100)
+    rand = 0.00001 * np.random.randn(len(xdata))
+    ydata = np.exp(-0.5 * (xdata-0.3)**2) / sqrt(2 * np.pi)
+    return xdata, ydata + rand
+
 def test_linear():
     print("Running test_linear()...")
     m = Symbol('m')
@@ -209,6 +216,9 @@ def test_linear():
     xdata, ydata = make_data()
     r = curve_fit(x, expr, xdata, ydata, {m: 0.0, c:0.0})
     print(r)
+    assert np.abs(r[0][c] - 3.073) < 1e-13
+    assert np.abs(r[0][m] + 1.077) < 1e-13
+    assert r[-1] == True
 
 def test_linear_nonlinear():
     print()
@@ -223,6 +233,9 @@ def test_linear_nonlinear():
     xdata, ydata = make_data()
     r = curve_fit(x, expr, xdata, ydata, {m: 0.0, c:0.0})
     print(r)
+    assert np.abs(r[0][c]**2 - 3.073) < 1e-4
+    assert np.abs(r[0][m] + 1.077) < 1e-4
+    assert r[-1] == True
 
 def test_cross_linear():
     print()
@@ -237,6 +250,9 @@ def test_cross_linear():
     xdata, ydata = make_data()
     r = curve_fit(x, expr, xdata, ydata, {m: 0.0, c:0.1})
     print(r)
+    assert np.abs(r[0][c] - 3.073) < 1e-4
+    assert np.abs(r[0][m]*r[0][c] + 1.077) < 1e-4
+    assert r[-1] == True
 
 def test_nonlinear():
     print()
@@ -251,9 +267,34 @@ def test_nonlinear():
     xdata, ydata = make_data()
     r = curve_fit(x, expr, xdata, ydata, {m: 0.0, c:0.0})
     print(r)
+    assert np.abs(r[0][c]**2 - 3.073) < 1e-4
+    assert np.abs(np.log(r[0][m]) + 1.077) < 1e-4
+    assert r[-1] == True
+
+def test_gaussian():
+    print()
+    print("Running test_gaussian()...")
+    x = Symbol('x')
+    b = Symbol('b')
+    mu = Symbol('mu')
+    sigma = Symbol('sigma')
+    expr = (b / sqrt(2 * pi * sigma**2)) * exp(-0.5 * (x-mu)**2 / sigma**2)
+    linpars, nonlinpars = get_linpars_nonlinpars(get_hessian(expr, [b, mu, sigma]), [b, mu, sigma])
+    assert equal_lists(linpars, [b])
+    assert equal_lists(nonlinpars, [mu, sigma])
+    xdata, ydata = make_gaussdata()
+    r = curve_fit(x, expr, xdata, ydata, {b: 0.0, mu:0.0, sigma:1.0})
+    print(r)
+    assert np.abs(r[0][sigma] - 1.0) < 1e-4
+    assert np.abs(r[0][b] - 1.0) < 1e-4
+    assert np.abs(r[0][mu] - 0.3) < 1e-4
+    assert r[-1] == True
 
 if __name__ == "__main__":
     test_linear()
     test_linear_nonlinear()
     test_cross_linear()
     test_nonlinear()
+    test_gaussian()
+    print()
+    print("All tests passed.")

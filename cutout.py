@@ -102,7 +102,7 @@ def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
 
         img = file[0].data[ymin:ymax,xmin:xmax]
         newfile = pyfits.PrimaryHDU(data=img,header=head)
-        if verbose: print "Cut image %s with dims %s to %s.  xrange: %f:%f, yrange: %f:%f" % (filename, file[0].data.shape,img.shape,xmin,xmax,ymin,ymax)
+        if verbose: print(("Cut image %s with dims %s to %s.  xrange: %f:%f, yrange: %f:%f" % (filename, file[0].data.shape,img.shape,xmin,xmax,ymin,ymax)))
 
     if isinstance(outfile,str):
         newfile.writeto(outfile,clobber=clobber)

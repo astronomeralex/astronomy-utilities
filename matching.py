@@ -11,7 +11,7 @@ def matching(objra,objdec,ras,decs,boxsize=1):
     """
     obj = coord.ICRSCoordinates(ra=objra, dec=objdec, unit=(u.degree, u.degree))
     distances = []
-    for i in xrange(len(ras)):
+    for i in range(len(ras)):
         if abs(ras[i] - objra) > 0.1 or abs(decs[i] - objdec) > 0.1:
             distances.append(9999)
         else:

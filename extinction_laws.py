@@ -24,8 +24,8 @@ def calzetti_stellar(flux,fluxerr,wave,ebvstellar,ebvlower,ebvupper,Rv = 4.05,Rv
     
     #do sanity checks on waves
     if wave < 0.12 or wave > 2.20:
-        print wave
-        raise Exception, "the input wavelength is outside the limits of the Calzetti law"
+        print(wave)
+        raise Exception("the input wavelength is outside the limits of the Calzetti law")
         
     #now find k'(lambda)
     kl = klambda(wave,Rv)

@@ -21,7 +21,12 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
     expression, which needs 'xvar' so that we know what the independent
     variable in 'expr' is.
 
-    For examples, check out the testing section below. """
+    For examples, check out the testing section below.
+
+    Currently, this exposes a bug in sympy's ufuncify(), see #2971 at
+    https://github.com/sympy/sympy/issues/2971. There is a proposed solution at
+    https://github.com/sympy/sympy/pull/3000, which is in the
+    'ufuncify_argument_order' branch at https://github.com/hsgg/sympy.git. """
 
     # get derivatives:
     variables = pars.keys()
@@ -52,7 +57,7 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
         extraargs = (xdata, ydata, sigma, funcset, nonlinfunc)
         nonlinvals, mlogl, success = fit_nonlinearly(mloglikelihood, nonlinvals,
                 extraargs, options)
-        # We except an array later on:
+        # We expect an array later on:
         try:
             length = len(nonlinvals)
         except TypeError:
@@ -290,7 +295,17 @@ def test_gaussian():
     assert np.abs(r[0][mu] - 0.3) < 1e-4
     assert r[-1] == True
 
+def test_ufuncify_argument_order():
+    print("Running test_ufuncify_argument_order()...")
+    # if this test fails, your sympy version is too old
+    a, b, c = symbols('a, b, c')
+    expr = a + b - c
+    fabc = ufuncify([a, b, c], expr)
+    facb = ufuncify([a, c, b], expr)
+    assert fabc(0, 1, 2) != facb(0, 1, 2)
+
 if __name__ == "__main__":
+    test_ufuncify_argument_order()
     test_linear()
     test_linear_nonlinear()
     test_cross_linear()

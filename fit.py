@@ -5,6 +5,7 @@ from __future__ import print_function, division
 import sys
 import numpy as np
 from sympy import *
+from sympy.core.compatibility import is_sequence
 import operator
 import scipy.optimize
 from sympy.utilities.autowrap import ufuncify # yo
@@ -54,15 +55,16 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
     # fit!
     success = True
     if len(nonlinpars) > 0:
-        extraargs = (xdata, ydata, sigma, funcset, nonlinfunc)
-        nonlinvals, mlogl, success = fit_nonlinearly(mloglikelihood, nonlinvals,
-                extraargs, options)
-        # We expect an array later on:
         try:
-            length = len(nonlinvals)
-        except TypeError:
+            extraargs = (xdata, ydata, sigma, funcset, nonlinfunc)
+            nonlinvals, mlogl, success = fit_nonlinearly(mloglikelihood, nonlinvals,
+                    extraargs, options)
+        except np.linalg.linalg.LinAlgError:
+            success = False
+
+        # We expect an array later on:
+        if not is_sequence(nonlinvals):
             nonlinvals = [nonlinvals]
-            length = 1
 
     # regain linear parameters
     try:

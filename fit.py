@@ -228,7 +228,6 @@ def test_linear():
     assert r[-1] == True
 
 def test_linear_nonlinear():
-    print()
     print("Running test_linear_nonlinear()...")
     m = Symbol('m')
     c = Symbol('c')
@@ -245,7 +244,6 @@ def test_linear_nonlinear():
     assert r[-1] == True
 
 def test_cross_linear():
-    print()
     print("Running test_cross_linear()...")
     m = Symbol('m')
     c = Symbol('c')
@@ -262,7 +260,6 @@ def test_cross_linear():
     assert r[-1] == True
 
 def test_nonlinear():
-    print()
     print("Running test_nonlinear()...")
     m = Symbol('m')
     c = Symbol('c')
@@ -279,7 +276,6 @@ def test_nonlinear():
     assert r[-1] == True
 
 def test_gaussian():
-    print()
     print("Running test_gaussian()...")
     x = Symbol('x')
     b = Symbol('b')
@@ -306,12 +302,18 @@ def test_ufuncify_argument_order():
     facb = ufuncify([a, c, b], expr)
     assert fabc(0, 1, 2) != facb(0, 1, 2)
 
+
 if __name__ == "__main__":
     test_ufuncify_argument_order()
+    print()
     test_linear()
+    print()
     test_linear_nonlinear()
+    print()
     test_cross_linear()
+    print()
     test_nonlinear()
+    print()
     test_gaussian()
     print()
     print("All tests passed.")

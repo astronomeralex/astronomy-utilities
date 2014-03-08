@@ -80,10 +80,9 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
     for p, v, in zip(linpars, linvals):
         parameters[p] = v
 
-    # provide function
-    fitexpr = expr.subs(parameters)
+    fisher = calc_fisher(xvar, parameters, expr, jacobian, hessian, xdata, ydata, sigma)
 
-    return parameters, fitexpr, mlogl, success
+    return parameters, fisher, mlogl, success
 
 def fit_linear_parameters(nonlinvals, x, y, sigma, funcset):
     num_linpar = len(funcset)
@@ -133,6 +132,23 @@ def fit_nonlinearly(func, nonlinvals, extraargs, options=None):
 
     return r.x, r.fun, r.success
 
+def calc_fisher(xvar, pars, expr, jacobian, hessian, xdata, ydata, sigma):
+    fitfunc = numerical_func(xvar, expr.subs(pars))
+    jacfunc = numerical_funcdict(xvar, pars, jacobian)
+    hessfunc = numerical_funcdict(xvar, pars, hessian)
+    return get_fisher(fitfunc, jacfunc, hessfunc, xdata, ydata, sigma)
+
+def get_fisher(fitfunc, jacfunc, hessfunc, xdata, ydata, sigma):
+    pars = jacfunc.keys()
+    fisher = {}
+    for var1 in pars:
+        for var2 in pars:
+            fisher[var1, var2] = (1/2) * (
+                    hessfunc[var1, var2](xdata).T.dot(sigma).dot(fitfunc(xdata) - ydata)
+                    + jacfunc[var2](xdata).T.dot(sigma).dot(jacfunc[var1](xdata))
+                    + jacfunc[var1](xdata).T.dot(sigma).dot(jacfunc[var2](xdata))
+                    + (fitfunc(xdata) - ydata).T.dot(sigma).dot(hessfunc[var1, var2](xdata)))
+    return fisher
 
 ######### helper functions #########
 def get_jacobian(expr, variables):
@@ -188,6 +204,13 @@ def numerical_func(arg_list, expr):
     print(arg_list, expr, "...ufuncify!")
     return ufuncify(arg_list, expr)
 
+def numerical_funcdict(xvar, pars, expr_dict):
+    func_dict = {}
+    for key in expr_dict.keys():
+        expr = expr_dict[key].subs(pars)
+        func_dict[key] = numerical_func(xvar, expr)
+    return func_dict
+
 ############## TESTS #####################
 def equal_lists(l1, l2):
     if len(l1) != len(l2):
@@ -200,16 +223,25 @@ def equal_lists(l1, l2):
         except ValueError: return False
     return True
 
+def equal_matrices(m1, m2, tol=1e-10):
+    for key in m1.keys():
+        if np.abs(m1[key] - m2[key]) > tol:
+            return False
+    for key in m2.keys():
+        if np.abs(m1[key] - m2[key]) > tol:
+            return False
+    return True
+
 def make_data():
     xdata = np.array([0.0, 1.0, 2.0, 3.0])
     ydata = np.array([3.1, 1.9, 1.03, -0.2])
     return xdata, ydata
 
-def make_gaussdata():
+def make_gaussdata(normalization=1.0, yerr=0.00001):
     xdata = np.linspace(-2.0, 2.0, 100)
-    rand = 0.00001 * np.random.randn(len(xdata))
-    ydata = np.exp(-0.5 * (xdata-0.3)**2) / sqrt(2 * np.pi)
-    return xdata, ydata + rand
+    ydata = np.exp(-0.5 * (xdata-0.3)**2) * normalization / sqrt(2 * np.pi)
+    rand = yerr * np.random.randn(len(xdata))
+    return xdata, ydata + rand, yerr
 
 def test_linear():
     print("Running test_linear()...")
@@ -226,6 +258,14 @@ def test_linear():
     assert np.abs(r[0][c] - 3.073) < 1e-13
     assert np.abs(r[0][m] + 1.077) < 1e-13
     assert r[-1] == True
+    yerr = 1.0
+    expected_fisher = {}
+    expected_fisher[m, m] = xdata.T.dot(xdata) / yerr**2
+    expected_fisher[m, c] = sum(xdata) / yerr**2
+    expected_fisher[c, m] = sum(xdata) / yerr**2
+    expected_fisher[c, c] = len(xdata) / yerr**2
+    print("expected_fisher =", expected_fisher)
+    assert equal_matrices(r[1], expected_fisher)
 
 def test_linear_nonlinear():
     print("Running test_linear_nonlinear()...")
@@ -285,13 +325,35 @@ def test_gaussian():
     linpars, nonlinpars = get_linpars_nonlinpars(get_hessian(expr, [b, mu, sigma]), [b, mu, sigma])
     assert equal_lists(linpars, [b])
     assert equal_lists(nonlinpars, [mu, sigma])
-    xdata, ydata = make_gaussdata()
-    r = curve_fit(x, expr, xdata, ydata, {b: 0.0, mu:0.0, sigma:1.0})
+    xdata, ydata, yerr = make_gaussdata()
+    r = curve_fit(x, expr, xdata, ydata, {b: 0.0, mu:0.0, sigma:1.0}, sigma=1/yerr**2)
     print(r)
     assert np.abs(r[0][sigma] - 1.0) < 1e-4
     assert np.abs(r[0][b] - 1.0) < 1e-4
     assert np.abs(r[0][mu] - 0.3) < 1e-4
     assert r[-1] == True
+
+def test_linear_fisher():
+    print("Running test_linear_fisher()...")
+    x = Symbol('x')
+    m = Symbol('m')
+    c = Symbol('c')
+    expr = m * x + c
+    yerr = 1.0
+    xdata = np.linspace(0.0, 100.0, 10000)
+    ydata = -0.345 * xdata + 33.0 + yerr * np.random.randn(len(xdata))
+    r = curve_fit(x, expr, xdata, ydata, {m:0.0, c:0.0}, sigma=1/yerr**2)
+    print(r)
+    assert np.abs(r[0][m] + 0.345) < 1e-3
+    assert np.abs(r[0][c] - 33.0) < 1e-1
+    assert r[-1] == True
+    expected_fisher = {}
+    expected_fisher[m, m] = xdata.T.dot(xdata) / yerr**2
+    expected_fisher[m, c] = sum(xdata) / yerr**2
+    expected_fisher[c, m] = sum(xdata) / yerr**2
+    expected_fisher[c, c] = len(xdata) / yerr**2
+    print("expected_fisher =", expected_fisher)
+    assert equal_matrices(r[1], expected_fisher)
 
 def test_ufuncify_argument_order():
     print("Running test_ufuncify_argument_order()...")
@@ -315,5 +377,7 @@ if __name__ == "__main__":
     test_nonlinear()
     print()
     test_gaussian()
+    print()
+    test_linear_fisher()
     print()
     print("All tests passed.")

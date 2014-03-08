@@ -201,6 +201,11 @@ def numerical_func(arg_list, expr):
     """ Turn an expression into a function. Theano might be an interesting
     option, too. Check this:
     http://docs.sympy.org/latest/modules/numeric-computation.html """
+    if expr == 0:
+        def zero_func(*args):
+            return np.zeros_like(args[0])
+        print(arg_list, expr, "...zero-like!")
+        return zero_func
     print(arg_list, expr, "...ufuncify!")
     return ufuncify(arg_list, expr)
 

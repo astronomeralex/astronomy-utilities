@@ -216,6 +216,29 @@ def numerical_funcdict(xvar, pars, expr_dict):
         func_dict[key] = numerical_func(xvar, expr)
     return func_dict
 
+def invert_matrixdict(matrix, variables):
+    mat = np.empty(shape=(len(variables), len(variables)))
+    i = 0
+    for var1 in variables:
+        j = 0
+        for var2 in variables:
+            mat[i, j] = matrix[var1, var2]
+            j += 1
+        i += 1
+
+    mat = np.linalg.inv(mat)
+
+    matrix_result = {}
+    i = 0
+    for var1 in variables:
+        j = 0
+        for var2 in variables:
+            matrix_result[var1, var2] = mat[i, j]
+            j += 1
+        i += 1
+
+    return matrix_result
+
 ############## TESTS #####################
 def equal_lists(l1, l2):
     if len(l1) != len(l2):
@@ -369,8 +392,22 @@ def test_ufuncify_argument_order():
     facb = ufuncify([a, c, b], expr)
     assert fabc(0, 1, 2) != facb(0, 1, 2)
 
+def test_invert_matrixdict():
+    print("Running test_invert_matrixdict()...")
+    variables = symbols('x y z v w s t')
+    mat = {}
+    for var1 in variables:
+        for var2 in variables:
+            mat[var1, var2] = np.random.randn()
+    matinv = invert_matrixdict(mat, variables)
+    matinvinv = invert_matrixdict(matinv, variables)
+    assert equal_matrices(mat, matinvinv)
+    assert not equal_matrices(mat, matinv)
+
 
 if __name__ == "__main__":
+    test_invert_matrixdict()
+    print()
     test_ufuncify_argument_order()
     print()
     test_linear()

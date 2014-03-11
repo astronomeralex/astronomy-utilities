@@ -80,7 +80,8 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
     for p, v, in zip(linpars, linvals):
         parameters[p] = v
 
-    fisher = calc_fisher(xvar, parameters, expr, jacobian, hessian, xdata, ydata, sigma)
+    fisherfuncs = get_fisherfuncs([xvar] + list(parameters.keys()), expr, jacobian, hessian)
+    fisher = calc_fisher(fisherfuncs, list(parameters.values()), xdata, ydata, sigma)
 
     return parameters, fisher, mlogl, success
 
@@ -138,22 +139,29 @@ def fit_nonlinearly(func, nonlinvals, extraargs, options=None):
         return None, None, False
 
 
-def calc_fisher(xvar, pars, expr, jacobian, hessian, xdata, ydata, sigma):
-    fitfunc = numerical_func(xvar, expr.subs(pars))
-    jacfunc = numerical_funcdict(xvar, pars, jacobian)
-    hessfunc = numerical_funcdict(xvar, pars, hessian)
-    return get_fisher(fitfunc, jacfunc, hessfunc, xdata, ydata, sigma)
+def create_fishy_function(fitfunc, jacfunc1, jacfunc2, hessfunc):
+    return lambda xdata, ydata, sigma, *parameters: (0.5) * (
+            hessfunc(xdata, *parameters).T.dot(sigma).dot(fitfunc(xdata, *parameters) - ydata)
+            + jacfunc2(xdata, *parameters).T.dot(sigma).dot(jacfunc1(xdata, *parameters))
+            + jacfunc1(xdata, *parameters).T.dot(sigma).dot(jacfunc2(xdata, *parameters))
+            + (fitfunc(xdata, *parameters) - ydata).T.dot(sigma).dot(hessfunc(xdata, *parameters)))
 
-def get_fisher(fitfunc, jacfunc, hessfunc, xdata, ydata, sigma):
-    pars = jacfunc.keys()
-    fisher = {}
+def get_fisherfuncs(variables, expr, jacobian, hessian):
+    fitfunc = numerical_func(variables, expr)
+    jacfunc = numerical_funcdict(variables, jacobian)
+    hessfunc = numerical_funcdict(variables, hessian)
+    pars = variables[1:]
+    fisherfuncs = {}
     for var1 in pars:
         for var2 in pars:
-            fisher[var1, var2] = (1/2) * (
-                    hessfunc[var1, var2](xdata).T.dot(sigma).dot(fitfunc(xdata) - ydata)
-                    + jacfunc[var2](xdata).T.dot(sigma).dot(jacfunc[var1](xdata))
-                    + jacfunc[var1](xdata).T.dot(sigma).dot(jacfunc[var2](xdata))
-                    + (fitfunc(xdata) - ydata).T.dot(sigma).dot(hessfunc[var1, var2](xdata)))
+            fisherfuncs[var1, var2] = create_fishy_function(fitfunc, jacfunc[var1], jacfunc[var2], hessfunc[var1, var2])
+    return fisherfuncs
+
+def calc_fisher(fisherfuncs, parametervalues, xdata, ydata, sigma):
+    print(parametervalues)
+    fisher = {}
+    for key in fisherfuncs.keys():
+        fisher[key] = fisherfuncs[key](xdata, ydata, sigma, *parametervalues)
     return fisher
 
 ######### helper functions #########
@@ -215,11 +223,10 @@ def numerical_func(arg_list, expr):
     print(arg_list, expr, "...ufuncify!")
     return ufuncify(arg_list, expr)
 
-def numerical_funcdict(xvar, pars, expr_dict):
+def numerical_funcdict(arg_list, expr_dict):
     func_dict = {}
     for key in expr_dict.keys():
-        expr = expr_dict[key].subs(pars)
-        func_dict[key] = numerical_func(xvar, expr)
+        func_dict[key] = numerical_func(arg_list, expr_dict[key])
     return func_dict
 
 def convert_matrixdict_to_matrix(matrix, variables):

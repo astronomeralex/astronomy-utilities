@@ -107,8 +107,11 @@ def fit_linear_parameters(nonlinvals, x, y, sigma, funcset):
 
     return linvals, mlogl, Aij
 
-def mloglikelihood(nonlinvals, x, y, sigma, funcset, nonlinfunc):
-    ylin = y - nonlinfunc(x, *nonlinvals)
+def mloglikelihood(nonlinvals, x, y, sigma, funcset, nonlinfunc=None):
+    if nonlinfunc == None:
+        ylin = np.copy(y)
+    else:
+        ylin = y - nonlinfunc(x, *nonlinvals)
     linvals, mlogl, fish = fit_linear_parameters(nonlinvals, x, ylin, sigma, funcset)
     #print(mlogl, "linvals =", linvals, " nonlinpar =", nonlinvals)
     return mlogl

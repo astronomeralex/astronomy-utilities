@@ -160,7 +160,6 @@ def get_fisherfuncs(variables, expr, jacobian, hessian):
     return fisherfuncs
 
 def calc_fisher(fisherfuncs, parametervalues, xdata, ydata, sigma):
-    print(parametervalues)
     fisher = {}
     for key in fisherfuncs.keys():
         fisher[key] = fisherfuncs[key](xdata, ydata, sigma, *parametervalues)
@@ -251,9 +250,9 @@ def numerical_func(arg_list, expr):
     if expr == 0:
         def zero_func(*args):
             return np.zeros_like(args[0])
-        print(arg_list, expr, "...zero-like!")
+        print(arg_list, expr, "...zero-like!", file=sys.stderr)
         return zero_func
-    print(arg_list, expr, "...ufuncify!")
+    print(arg_list, expr, "...ufuncify!", file=sys.stderr)
     return ufuncify(arg_list, expr)
 
 def numerical_funcdict(arg_list, expr_dict):

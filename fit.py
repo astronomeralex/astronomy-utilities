@@ -10,7 +10,7 @@ import operator
 import scipy.optimize
 from sympy.utilities.autowrap import ufuncify # yo
 
-def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
+def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=None):
     """ 'curve_fit()' uses sympy to break the fitting into appropriate
     sub-problems to speed up the fitting process. For example, if there are
     linear parameters in 'expr', then those will be fit with an efficient
@@ -31,21 +31,20 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
 
     # get derivatives:
     variables = pars.keys()
-    jacobian = get_jacobian(expr, variables)
-    hessian = get_hessian(expr, variables)
-    linpars, nonlinpars = get_linpars_nonlinpars(hessian, pars.keys())
-    print("Linear:", linpars)
-    print("Nonlinear:", nonlinpars)
+    if cache == None:
+        cache = make_cache(xvar, variables, expr)
+    else:
+        assert xvar == cache['xvar']
+        assert equal_lists(variables, cache['variables'])
+        assert expr == cache['expr']
 
-    # yeah, ufuncify. yo. order matters.
-    funcset = []
-    nonlinexpr = expr
-    for p in linpars:
-        funcset += [numerical_func([xvar] + nonlinpars, jacobian[p])]
-        nonlinexpr -= p * jacobian[p]
-    nonlinfunc = numerical_func([xvar] + nonlinpars, nonlinexpr)
-    if len(nonlinpars) == 0:
-        assert nonlinexpr == 0
+    jacobian = cache['jacobian']
+    hessian = cache['hessian']
+    linpars = cache['linpars']
+    nonlinpars = cache['nonlinpars']
+    funcset = cache['funcset']
+    nonlinfunc = cache['nonlinfunc']
+    fisherfuncs = cache['fisherfuncs']
 
     # set nonlinpar values, order matters
     nonlinvals = []
@@ -80,8 +79,11 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None):
     for p, v, in zip(linpars, linvals):
         parameters[p] = v
 
-    fisherfuncs = get_fisherfuncs([xvar] + list(parameters.keys()), expr, jacobian, hessian)
-    fisher = calc_fisher(fisherfuncs, list(parameters.values()), xdata, ydata, sigma)
+    # ensure correct order:
+    parametervalues = []
+    for var in variables:
+        parametervalues += [parameters[var]]
+    fisher = calc_fisher(fisherfuncs, parametervalues, xdata, ydata, sigma)
 
     return parameters, fisher, mlogl, success
 
@@ -210,6 +212,37 @@ def get_linpars_nonlinpars(hessian, variables):
             break
 
     return linpars, nonlinpars
+
+def make_cache(xvar, variables, expr):
+    cache = {'xvar': xvar, 'variables': variables, 'expr': expr}
+
+    jacobian = get_jacobian(expr, variables)
+    hessian = get_hessian(expr, variables)
+    linpars, nonlinpars = get_linpars_nonlinpars(hessian, variables)
+    print("Linear:", linpars, file=sys.stderr)
+    print("Nonlinear:", nonlinpars, file=sys.stderr)
+
+    # yeah, ufuncify. yo. order matters.
+    funcset = []
+    nonlinexpr = expr
+    for p in linpars:
+        funcset += [numerical_func([xvar] + nonlinpars, jacobian[p])]
+        nonlinexpr -= p * jacobian[p]
+    nonlinfunc = numerical_func([xvar] + nonlinpars, nonlinexpr)
+    if len(nonlinpars) == 0:
+        assert nonlinexpr == 0
+
+    cache['jacobian'] = jacobian
+    cache['hessian'] = hessian
+    cache['linpars'] = linpars
+    cache['nonlinpars'] = nonlinpars
+    cache['funcset'] = funcset
+    cache['nonlinfunc'] = nonlinfunc
+
+    cache['fisherfuncs'] = get_fisherfuncs([xvar] + variables, expr, jacobian, hessian)
+
+    return cache
+
 
 def numerical_func(arg_list, expr):
     """ Turn an expression into a function. Theano might be an interesting

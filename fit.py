@@ -219,7 +219,7 @@ def numerical_funcdict(xvar, pars, expr_dict):
         func_dict[key] = numerical_func(xvar, expr)
     return func_dict
 
-def invert_matrixdict(matrix, variables):
+def convert_matrixdict_to_matrix(matrix, variables):
     mat = np.empty(shape=(len(variables), len(variables)))
     i = 0
     for var1 in variables:
@@ -228,6 +228,10 @@ def invert_matrixdict(matrix, variables):
             mat[i, j] = matrix[var1, var2]
             j += 1
         i += 1
+    return mat
+
+def invert_matrixdict(matrix, variables):
+    mat = convert_matrixdict_to_matrix(matrix, variables)
 
     mat = np.linalg.inv(mat)
 

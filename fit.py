@@ -130,10 +130,13 @@ def fit_nonlinearly(func, nonlinvals, extraargs, options=None):
             #"SLSQP" # sucks
             ]
 
-    r = scipy.optimize.minimize(func, nonlinvals, args=extraargs,
-            method=method[0], options=options)
+    try:
+        r = scipy.optimize.minimize(func, nonlinvals, args=extraargs,
+                method=method[0], options=options)
+        return r.x, r.fun, r.success
+    except np.linalg.linalg.LinAlgError:
+        return None, None, False
 
-    return r.x, r.fun, r.success
 
 def calc_fisher(xvar, pars, expr, jacobian, hessian, xdata, ydata, sigma):
     fitfunc = numerical_func(xvar, expr.subs(pars))

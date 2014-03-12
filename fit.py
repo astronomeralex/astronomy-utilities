@@ -10,6 +10,10 @@ import operator
 import scipy.optimize
 from sympy.utilities.autowrap import ufuncify # yo
 
+#infinity = float("inf") # this gives warnings with numpy
+infinity = sys.float_info.max
+
+
 def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=None):
     """ 'curve_fit()' uses sympy to break the fitting into appropriate
     sub-problems to speed up the fitting process. For example, if there are
@@ -53,12 +57,9 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=Non
     # fit!
     success = True
     if len(nonlinpars) > 0:
-        try:
-            extraargs = (xdata, ydata, sigma, funcset, nonlinfunc)
-            nonlinvals, mlogl, success = fit_nonlinearly(mloglikelihood, nonlinvals,
-                    extraargs, options)
-        except np.linalg.linalg.LinAlgError:
-            success = False
+        extraargs = (xdata, ydata, sigma, funcset, nonlinfunc)
+        nonlinvals, mlogl, success = fit_nonlinearly(mloglikelihood, nonlinvals,
+                extraargs, options)
 
         # We expect an array later on:
         if not is_sequence(nonlinvals):
@@ -73,6 +74,8 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=Non
                 ylin, sigma, funcset)
     except np.linalg.linalg.LinAlgError:
         success = False
+        linvals = [0.0] * len(linpars)
+        mlogl = infinity
 
     # reconstruct full parameter list
     parameters = {}
@@ -117,8 +120,12 @@ def mloglikelihood(nonlinvals, x, y, sigma, funcset, nonlinfunc=None):
         ylin = y # copy should not be needed
     else:
         ylin = y - nonlinfunc(x, *nonlinvals)
-    linvals, mlogl, fish = fit_linear_parameters(nonlinvals, x, ylin, sigma, funcset)
-    return mlogl
+
+    try:
+        linvals, mlogl, fish = fit_linear_parameters(nonlinvals, x, ylin, sigma, funcset)
+        return mlogl
+    except np.linalg.linalg.LinAlgError:
+        return infinity
 
 def fit_nonlinearly(func, nonlinvals, extraargs, options=None):
     method = [
@@ -134,12 +141,9 @@ def fit_nonlinearly(func, nonlinvals, extraargs, options=None):
             #"SLSQP" # sucks
             ]
 
-    try:
-        r = scipy.optimize.minimize(func, nonlinvals, args=extraargs,
-                method=method[0], options=options)
-        return r.x, r.fun, r.success
-    except np.linalg.linalg.LinAlgError:
-        return None, None, False
+    r = scipy.optimize.minimize(func, nonlinvals, args=extraargs,
+            method=method[0], options=options)
+    return r.x, r.fun, r.success
 
 
 def create_fishy_function(fitfunc, jacfunc1, jacfunc2, hessfunc):
@@ -458,6 +462,21 @@ def test_cache_variables_order():
     assert r1[3]
     assert r2[3]
 
+def test_singular_matrix():
+    print("Running test_singular_matrix()...")
+    x, b, mu, sigma = symbols('x b mu sigma')
+    expr = (b / sqrt(2 * pi * sigma**2)) * exp(-0.5 * (x-mu)**2 / sigma**2)
+    xdata, ydata, yerr = make_gaussdata()
+    # Make sure the initial guess is so far off that the matrix will be
+    # singular:
+    initpars = {b: 0.0, mu:-1e12, sigma:1.0}
+    r = curve_fit(x, expr, xdata, ydata, initpars, sigma=1/yerr**2)
+    print(r)
+    if r[3] != False:
+        raise Exception("This test may be ineffective. curve_fit() should fail,"
+                + "but claims it didn't.")
+
+
 def test_ufuncify_argument_order():
     print("Running test_ufuncify_argument_order()...")
     # if this test fails, your sympy version is too old
@@ -498,5 +517,7 @@ if __name__ == "__main__":
     test_linear_fisher()
     print()
     test_cache_variables_order()
+    print()
+    test_singular_matrix()
     print()
     print("All tests passed.")

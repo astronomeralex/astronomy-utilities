@@ -313,12 +313,15 @@ def equal_listorder(l1, l2):
             return False
     return True
 
+def reldiff(a, b):
+    return np.abs(2 * (a - b) / (a + b))
+
 def equal_dicts_tol(m1, m2, tol=1e-10):
     for key in m1.keys():
-        if np.abs(m1[key] - m2[key]) > tol:
+        if reldiff(m1[key], m2[key]) > tol:
             return False
     for key in m2.keys():
-        if np.abs(m1[key] - m2[key]) > tol:
+        if reldiff(m1[key], m2[key]) > tol:
             return False
     return True
 
@@ -434,8 +437,8 @@ def test_linear_fisher():
     ydata = -0.345 * xdata + 33.0 + yerr * np.random.randn(len(xdata))
     r = curve_fit(x, expr, xdata, ydata, {m:0.0, c:0.0}, sigma=1/yerr**2)
     print(r)
-    assert np.abs(r[0][m] + 0.345) < 1e-3
-    assert np.abs(r[0][c] - 33.0) < 1e-1
+    assert reldiff(r[0][m], -0.345) < 1e-3
+    assert reldiff(r[0][c], 33.0) < 1e-3
     assert r[-1] == True
     expected_fisher = {}
     expected_fisher[m, m] = xdata.T.dot(xdata) / yerr**2

@@ -65,10 +65,13 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=Non
         if not is_sequence(nonlinvals):
             nonlinvals = [nonlinvals]
 
+    assert len(nonlinvals) == len(nonlinpars)
+
     # regain linear parameters
     try:
+        ylin = ydata - nonlinfunc(xdata, *nonlinvals)
         linvals, mlogl, fisher = fit_linear_parameters(nonlinvals, xdata,
-                ydata - nonlinfunc(xdata, *nonlinvals), sigma, funcset)
+                ylin, sigma, funcset)
     except np.linalg.linalg.LinAlgError:
         success = False
 
@@ -112,11 +115,10 @@ def fit_linear_parameters(nonlinvals, x, y, sigma, funcset):
 
 def mloglikelihood(nonlinvals, x, y, sigma, funcset, nonlinfunc=None):
     if nonlinfunc == None:
-        ylin = np.copy(y)
+        ylin = y # copy should not be needed
     else:
         ylin = y - nonlinfunc(x, *nonlinvals)
     linvals, mlogl, fish = fit_linear_parameters(nonlinvals, x, ylin, sigma, funcset)
-    #print(mlogl, "linvals =", linvals, " nonlinpar =", nonlinvals)
     return mlogl
 
 def fit_nonlinearly(func, nonlinvals, extraargs, options=None):

@@ -487,7 +487,12 @@ def test_ufuncify_argument_order():
     expr = a + b - c
     fabc = ufuncify([a, b, c], expr)
     facb = ufuncify([a, c, b], expr)
-    assert fabc(0, 1, 2) != facb(0, 1, 2)
+    x = fabc(0.5, 1.1, 2.2) # = -0.6
+    y = facb(0.5, 1.1, 2.2) # =  1.6
+    print("difference:", x + 0.6, y - 1.6)
+    print("reldiff:   ", reldiff(x, -0.6), reldiff(y, 1.6))
+    assert reldiff(x, -0.6) <= 2.0**(-52)
+    assert reldiff(y,  1.6) <= 2.0**(-52)
 
 def test_invert_matrixdict():
     print("Running test_invert_matrixdict()...")

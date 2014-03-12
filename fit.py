@@ -30,14 +30,13 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=Non
     'ufuncify_argument_order' branch at https://github.com/hsgg/sympy.git. """
 
     # get derivatives:
-    variables = pars.keys()
     if cache == None:
-        cache = make_cache(xvar, variables, expr)
-    else:
-        assert xvar == cache['xvar']
-        assert equal_lists(variables, cache['variables'])
-        assert expr == cache['expr']
+        cache = make_cache(xvar, pars.keys(), expr)
+    assert xvar == cache['xvar']
+    assert equal_list_elements(pars.keys(), cache['variables'])
+    assert expr == cache['expr']
 
+    variables = cache['variables']
     jacobian = cache['jacobian']
     hessian = cache['hessian']
     linpars = cache['linpars']
@@ -291,7 +290,7 @@ def invert_matrixdict(matrix, variables):
     return matrix_result
 
 ############## TESTS #####################
-def equal_lists(l1, l2):
+def equal_list_elements(l1, l2):
     if len(l1) != len(l2):
         return False
     for i in l1:
@@ -302,7 +301,15 @@ def equal_lists(l1, l2):
         except ValueError: return False
     return True
 
-def equal_matrices(m1, m2, tol=1e-10):
+def equal_listorder(l1, l2):
+    if len(l1) != len(l2):
+        return False
+    for i in range(len(l1)):
+        if l1[i] != l2[i]:
+            return False
+    return True
+
+def equal_dicts_tol(m1, m2, tol=1e-10):
     for key in m1.keys():
         if np.abs(m1[key] - m2[key]) > tol:
             return False
@@ -329,7 +336,7 @@ def test_linear():
     x = Symbol('x')
     expr = m * x + c
     linpars, nonlinpars = get_linpars_nonlinpars(get_hessian(expr, [m, c]), [m, c])
-    assert equal_lists(linpars, [m, c])
+    assert equal_list_elements(linpars, [m, c])
     assert nonlinpars == []
     xdata, ydata = make_data()
     r = curve_fit(x, expr, xdata, ydata, {m: 0.0, c:0.0})
@@ -344,7 +351,7 @@ def test_linear():
     expected_fisher[c, m] = sum(xdata) / yerr**2
     expected_fisher[c, c] = len(xdata) / yerr**2
     print("expected_fisher =", expected_fisher)
-    assert equal_matrices(r[1], expected_fisher)
+    assert equal_dicts_tol(r[1], expected_fisher)
 
 def test_linear_nonlinear():
     print("Running test_linear_nonlinear()...")
@@ -385,8 +392,8 @@ def test_nonlinear():
     x = Symbol('x')
     expr = log(m) * x + c * c
     linpars, nonlinpars = get_linpars_nonlinpars(get_hessian(expr, [m, c]), [m, c])
-    assert equal_lists(linpars, [])
-    assert equal_lists(nonlinpars, [m, c])
+    assert equal_list_elements(linpars, [])
+    assert equal_list_elements(nonlinpars, [m, c])
     xdata, ydata = make_data()
     r = curve_fit(x, expr, xdata, ydata, {m: 0.0, c:0.0})
     print(r)
@@ -402,8 +409,8 @@ def test_gaussian():
     sigma = Symbol('sigma')
     expr = (b / sqrt(2 * pi * sigma**2)) * exp(-0.5 * (x-mu)**2 / sigma**2)
     linpars, nonlinpars = get_linpars_nonlinpars(get_hessian(expr, [b, mu, sigma]), [b, mu, sigma])
-    assert equal_lists(linpars, [b])
-    assert equal_lists(nonlinpars, [mu, sigma])
+    assert equal_list_elements(linpars, [b])
+    assert equal_list_elements(nonlinpars, [mu, sigma])
     xdata, ydata, yerr = make_gaussdata()
     r = curve_fit(x, expr, xdata, ydata, {b: 0.0, mu:0.0, sigma:1.0}, sigma=1/yerr**2)
     print(r)
@@ -432,7 +439,24 @@ def test_linear_fisher():
     expected_fisher[c, m] = sum(xdata) / yerr**2
     expected_fisher[c, c] = len(xdata) / yerr**2
     print("expected_fisher =", expected_fisher)
-    assert equal_matrices(r[1], expected_fisher)
+    assert equal_dicts_tol(r[1], expected_fisher)
+
+
+def test_cache_variables_order():
+    print("Running test_cache_variables_order()...")
+    x, m, c = symbols('x m c')
+    expr = m * x + c
+    xdata, ydata = make_data()
+    cache = make_cache(x, [m, c], expr)
+    r1 = curve_fit(x, expr, xdata, ydata, {m:0.0, c:0.0}, cache=cache)
+    r2 = curve_fit(x, expr, xdata, ydata, {c:0.0, m:0.0}, cache=cache)
+    print("r1 =", r1)
+    print("r2 =", r2)
+    assert equal_dicts_tol(r1[0], r2[0])
+    assert equal_dicts_tol(r1[1], r2[1])
+    assert np.abs(r1[2] - r2[2]) < 1e-10
+    assert r1[3]
+    assert r2[3]
 
 def test_ufuncify_argument_order():
     print("Running test_ufuncify_argument_order()...")
@@ -452,8 +476,8 @@ def test_invert_matrixdict():
             mat[var1, var2] = np.random.randn()
     matinv = invert_matrixdict(mat, variables)
     matinvinv = invert_matrixdict(matinv, variables)
-    assert equal_matrices(mat, matinvinv)
-    assert not equal_matrices(mat, matinv)
+    assert equal_dicts_tol(mat, matinvinv)
+    assert not equal_dicts_tol(mat, matinv)
 
 
 if __name__ == "__main__":
@@ -472,5 +496,7 @@ if __name__ == "__main__":
     test_gaussian()
     print()
     test_linear_fisher()
+    print()
+    test_cache_variables_order()
     print()
     print("All tests passed.")

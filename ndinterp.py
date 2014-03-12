@@ -13,7 +13,11 @@
 
 def ndinterp(point, gridpoints, grid):
     """
-    moose moose
+    Point is a single array or sequence of the points where interpolation will occur
+    
+    grid points is a list of arrays that list the coordinates where values are recorded for each axis
+    
+    grid contains the model values for each point
     """
     
     points = np.atleast_2d(points)

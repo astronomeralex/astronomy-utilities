@@ -50,9 +50,7 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=Non
     fisherfuncs = cache['fisherfuncs']
 
     # set nonlinpar values, order matters
-    nonlinvals = []
-    for p in nonlinpars:
-        nonlinvals += [pars[p]]
+    nonlinvals = [pars[p] for p in nonlinpars]
 
     # fit!
     success = True
@@ -81,13 +79,11 @@ def curve_fit(xvar, expr, xdata, ydata, pars, sigma=1.0, options=None, cache=Non
     parameters = {}
     for p, v in zip(nonlinpars, nonlinvals):
         parameters[p] = v
-    for p, v, in zip(linpars, linvals):
+    for p, v in zip(linpars, linvals):
         parameters[p] = v
 
     # ensure correct order:
-    parametervalues = []
-    for var in variables:
-        parametervalues += [parameters[var]]
+    parametervalues = [parameters[var] for var in variables]
     fisher = calc_fisher(fisherfuncs, parametervalues, xdata, ydata, sigma)
 
     return parameters, fisher, mlogl, success
@@ -268,13 +264,9 @@ def numerical_funcdict(arg_list, expr_dict):
 
 def convert_matrixdict_to_matrix(matrix, variables):
     mat = np.empty(shape=(len(variables), len(variables)))
-    i = 0
-    for var1 in variables:
-        j = 0
-        for var2 in variables:
+    for i, var1 in enumerate(variables):
+        for j, var2 in enumerate(variables):
             mat[i, j] = matrix[var1, var2]
-            j += 1
-        i += 1
     return mat
 
 def invert_matrixdict(matrix, variables):
@@ -283,13 +275,9 @@ def invert_matrixdict(matrix, variables):
     mat = np.linalg.inv(mat)
 
     matrix_result = {}
-    i = 0
-    for var1 in variables:
-        j = 0
-        for var2 in variables:
+    for i, var1 in enumerate(variables):
+        for j, var2 in enumerate(variables):
             matrix_result[var1, var2] = mat[i, j]
-            j += 1
-        i += 1
 
     return matrix_result
 

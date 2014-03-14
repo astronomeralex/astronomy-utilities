@@ -421,7 +421,7 @@ def test_linear_fisher():
     c = Symbol('c')
     expr = m * x + c
     yerr = 1.0
-    xdata = np.linspace(0.0, 100.0, 10000)
+    xdata = np.linspace(0.0, 100.0, 1000000)
     ydata = -0.345 * xdata + 33.0 + yerr * np.random.randn(len(xdata))
     r = curve_fit(x, expr, xdata, ydata, {m:0.0, c:0.0}, sigma=1/yerr**2)
     print(r)

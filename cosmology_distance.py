@@ -37,7 +37,7 @@ def distcalc(z,h=0.70,omegalambda=0.7,omegam=0.3,omegak=0.0):
     elif omegak > 0:
         dm = dh/np.sqrt(omegak) * np.sinh(dc * np.sqrt(omegak) / dh)
     else:
-        dm = dh/np.sqrt(abs(omegak)) * np.sinh(dc * np.sqrt(abs(omegak)) / dh)
+        dm = dh/np.sqrt(abs(omegak)) * np.sin(dc * np.sqrt(abs(omegak)) / dh)
 
 
     #now i will calculate the angular diameter distance (hogg eqn 18)
@@ -55,9 +55,19 @@ def distcalc(z,h=0.70,omegalambda=0.7,omegam=0.3,omegak=0.0):
     tlookback = hubbletimeyr * integrate.quad(timeintegrand,0,z,(omegalambda,omegam,omegak))[0]
     
     tz = hubbletimeyr * integrate.quad(timeintegrand,z,np.inf,(omegalambda,omegam,omegak))[0]
+    
+    #all sky co-moving volume out to redshift z (hogg eqn 30)
+    if omegak == 0:
+        vc = 4 * np.pi * dm**3 / 3
+    elif omegak > 0:
+        vc = ( 4 * np.pi * dh**3 / (2 * omegak) ) * ( dm * np.sqrt(1 + omegak * dm**2 / dh**2) / dh - 
+        np.arcsinh( np.sqrt(omegak) * dm / dh ) / np.sqrt(omegak) )
+    else:
+        vc = ( 4 * np.pi * dh**3 / (2 * omegak) ) * ( dm * np.sqrt(1 + omegak * dm**2 / dh**2) / dh - 
+        np.arcsin( np.sqrt(abs(omegak)) * dm / dh ) / np.sqrt(abs(omegak)) )
 
     #for output, i will make a dictionary
-    output = dict(dh=dh,dc=dc,dm=dm,da=da,scale=scale,dl=dl,tlookback = tlookback,tz=tz)
+    output = dict(dh=dh, dc=dc, dm=dm, da=da, scale=scale, dl=dl, tlookback = tlookback, tz=tz, vc=vc)
 
     return output
     
@@ -125,4 +135,8 @@ def tlookback(z,h=0.7,omegalambda=0.7,omegam=0.3,omegak=0.0):
     
 def tz(z,h=0.7,omegalambda=0.7,omegam=0.3,omegak=0.0):
 
-    return distcalc(z,h,omegalambda,omegam,omegak)['tz']    
+    return distcalc(z,h,omegalambda,omegam,omegak)['tz']
+
+def vc(z,h=0.7,omegalambda=0.7,omegam=0.3,omegak=0.0):
+
+    return distcalc(z,h,omegalambda,omegam,omegak)['vc']   

@@ -1,12 +1,11 @@
 import numpy as np
 import scipy.interpolate as interp
 
-def concentration(radii, phot, interp_kind='linear', add_zero=True)
+def concentration(radii, phot, interp_kind='linear', add_zero=True):
     """
     Calculates the concentration parameter
     C = 5 * log10(r_80 / r2_0) 
-    
-    
+    Inputs:
     radii -- 1d array of aperture photometry radii
     phot -- 1d array of aperture photometry fluxes
     interp_kind -- kind of interpolation; passed to scipy.interpolate.interp1d. 
@@ -20,7 +19,7 @@ def concentration(radii, phot, interp_kind='linear', add_zero=True)
     assert np.all(phot > 0)
     if add_zero:
         radii = np.insert(radii, 0, 0)
-        phot = np.intert(phot, 0, 0)
+        phot = np.insert(phot, 0, 0)
     norm_phot = phot / np.max(phot)
     radius_interp = interp.interp1d(norm_phot, radii, kind=interp_kind)
     r20 = radius_interp(0.2)

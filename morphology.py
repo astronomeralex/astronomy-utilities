@@ -1,7 +1,8 @@
 import numpy as np
 import scipy.interpolate as interp
+import warnings
 
-def concentration(radii, phot, eta_radius=0.2, eta_radius_factor=1.5, interp_kind='linear', add_zero=True):
+def concentration(radii, phot, eta_radius=0.2, eta_radius_factor=1.5, interp_kind='linear', add_zero=False):
     """
     Calculates the concentration parameter
     C = 5 * log10(r_80 / r2_0) 
@@ -20,10 +21,18 @@ def concentration(radii, phot, eta_radius=0.2, eta_radius_factor=1.5, interp_kin
     if add_zero:
         radii = np.insert(radii, 0, 0)
         phot = np.insert(phot, 0, 0)
-    eta_interp = interp.interp1d(eta(radii, phot), radii, kind=interp_kind)
-    eta_r = eta_radius_factor * eta_interp(eta_radius)
+    eta_vals = eta(radii, phot)
+    if np.any(eta_vals < 0.2):
+        eta_interp = interp.interp1d(eta_vals, radii, kind=interp_kind)
+        eta_r = eta_radius_factor * eta_interp(eta_radius)
+    else:
+        warnings.warn("eta is never less than " + str(eta_radius) + ". Using lowest eta value as proxy")
+        eta_r = eta_radius_factor * radii[np.argmin(eta_vals)]
     phot_interp = interp.interp1d(radii, phot, kind=interp_kind)
-    maxphot = phot_interp(eta_r)
+    if eta_r < np.max(radii):
+        maxphot = phot_interp(eta_r)
+    else:
+        maxphot = np.max(phot)
     norm_phot = phot / maxphot
     radius_interp = interp.interp1d(norm_phot, radii, kind=interp_kind)
     r20 = radius_interp(0.2)

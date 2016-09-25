@@ -77,9 +77,12 @@ def snr(name):
     apphot = np.loadtxt(name + ".apphot", usecols=[0,1])
     radii = apphot[:,0]
     phot = apphot[:,1]
-    eta_rad = find_eta(0.2, radii, phot)
-    if eta_rad > np.max(radii)/1.5:
-        eta_rad = np.max(radii)/1.5
+    try:
+        eta_rad = find_eta(0.2, radii, phot)
+        if eta_rad > np.max(radii)/1.5:
+            eta_rad = np.max(radii)/1.5
+    except ValueError:
+        eta_rad = 1.0
     phot_interp = interp.interp1d(radii, phot)
     total_phot = phot_interp(1.5*eta_rad)
     return total_phot / np.sqrt(np.pi*(1.5*eta_rad)**2 * im_err**2)

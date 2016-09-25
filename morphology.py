@@ -72,7 +72,7 @@ def snr(name):
     #first calculate the image uncertainty using the MAD
     hdulist = fits.open(name + '_bs.fits')
     im_med = np.median(hdulist[0].data)
-    im_err = np.median(hdulist[0].data - im_med)
+    im_err = np.median(np.abs(hdulist[0].data - im_med))
     #now get the total flux
     apphot = np.loadtxt(name + ".apphot", usecols=[0,1])
     radii = apphot[:,0]

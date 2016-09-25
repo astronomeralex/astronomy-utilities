@@ -82,7 +82,7 @@ def snr(name):
         eta_rad = np.max(radii)/1.5
     phot_interp = interp.interp1d(radii, phot)
     total_phot = phot_interp(1.5*eta_rad)
-    return total_phot / im_err
+    return total_phot / np.sqrt(np.pi*(1.5*eta_rad)**2 * im_err**2)
     
     
     

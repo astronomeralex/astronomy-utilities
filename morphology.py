@@ -65,7 +65,7 @@ def find_eta(eta_val, radii, phot):
     return eta_interp(eta_val)
     
     
-def snr(name)
+def snr(name):
     """
     name before fits and apphot files
     """

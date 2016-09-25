@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.interpolate as interp
 import warnings
+from astropy.io import fits
 
 def concentration(radii, phot, eta_radius=0.2, eta_radius_factor=1.5, interp_kind='linear', add_zero=False):
     """
@@ -62,3 +63,31 @@ def eta(radii, phot):
 def find_eta(eta_val, radii, phot):
     eta_interp = interp.interp1d(eta(radii, phot), radii)
     return eta_interp(eta_val)
+    
+    
+def snr(name)
+    """
+    name before fits and apphot files
+    """
+    #first calculate the image uncertainty using the MAD
+    hdulist = fits.open(name + '_bs.fits')
+    im_med = np.median(hdulist[0].data)
+    im_err = np.median(hdulist[0].data - im_med)
+    #now get the total flux
+    apphot = np.loadtxt(name + ".apphot", usecols=[0,1])
+    radii = apphot[:,0]
+    phot = apphot[:,1]
+    eta_rad = find_eta(0.2, radii, phot)
+    if eta_rad > np.max(radii)/1.5:
+        eta_rad = np.max(radii)/1.5
+    phot_interp = interp.interp1d(radii, phot)
+    total_phot = phot_interp(1.5*eta_rad)
+    return total_phot / im_err
+    
+    
+    
+    
+    
+    
+    
+    

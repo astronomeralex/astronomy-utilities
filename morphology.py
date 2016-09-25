@@ -59,3 +59,6 @@ def eta(radii, phot):
     eta = I_r / I_bar
     return eta
 
+def find_eta(eta_val, radii, phot):
+    eta_interp = interp.interp1d(eta(radii, phot), radii)
+    return eta_interp(eta_val)

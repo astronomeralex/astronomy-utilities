@@ -19,13 +19,17 @@ def make_cutouts(fitsfilename, RA, DEC, name, xw, yw, fits_memmap=False):
     RA - array of ras in degrees
     DEC - array of decs in degrees
     name - array of names for output file
+    xw,yw - x and y width in pixels
     fits-memmap - should the fits file be memmaped (turn on if large)
     """
     fitswcs = wcs.WCS(fitsfilename)
     fitsfile = fits.open(fitsfilename,memmap = fits_memmap)
     xypix = fitswcs.all_world2pix(RA, DEC, 0)
     for i in  range(len(name)):
-        cutout(fitsfile, xypix[0][i], xypix[1][i], xw, yw, name[i])
+        try:
+             cutout(fitsfile, xypix[0][i], xypix[1][i], xw, yw, name[i])
+        except ValueError:
+             print(name[i]," lies outside of image")
     
 
 def cutout(filename, xc, yc, xw, yw, outfile, clobber=True, verbose=False):

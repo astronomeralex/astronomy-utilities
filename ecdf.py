@@ -7,6 +7,12 @@ def ecdf(arr):
     this will take in a numpy array arr
     and return x, y, and the variance, which can then be used to
     plot the ecdf
+    
+    use:
+    x, y, yvar = ecdf(spam)
+    plot(x, y, 'b')
+    plot(x, y + np.sqrt(yvar), 'b--') #1 sigma upper variance
+    plot(x, y - np.sqrt(yvar), 'b--') #1 sigma lower variance
     """
     newarr = np.sort(arr)
     xout = []
